@@ -14,7 +14,6 @@
     "copy-paste": "^1.5.3",
     "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
-    "open": "^10.1.0",
     "readline-sync": "^1.4.10",
     "uuid": "^9.0.1"
   }

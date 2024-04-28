@@ -16,20 +16,26 @@ const api = axios.create({
 //! Login function to authenticate the user
 // ? Stores the token and userId in a session file
 async function login() {
+
+    console.log("\x1b[94m%s\x1b[0m", `\n[ 𝚖𝚘𝚕𝚎𝚡.𝚌𝚕𝚘𝚞𝚍 ]`);
+
     try {
-        let sessionData = {};
         try {
             const fileData = await fs.readFile(sessionFile, "utf-8");
             sessionData = JSON.parse(fileData);
+            const decodedToken = jwt.decode(sessionData.token);
+
+            if (sessionData.token && sessionData.userId) {
+                console.log(`\nWelcome back, \x1b[92m${decodedToken.username}\x1b[0m!\n----------------------\n`);
+
+                return;
+            }
+
         } catch (error) {
             console.log("Session file not found.");
             await fs.writeFile(sessionFile, JSON.stringify({}));
         }
-
-        if (sessionData.token && sessionData.userId) {
-            console.log("You are already logged in.");
-            return;
-        }
+       
 
         const username = await promptInput("Enter your username: ");
         const password = await promptInput("Enter your password: ", true);
@@ -60,6 +66,7 @@ async function login() {
 }
 
 //! Create a file record in the database.
+// ? A file record is created in the backend to store the file details.
 const createRecord = async (filename, path, isPrivate, fileType, fileSize) => {
     try {
         const sessionData = await fs.readFile('session.json', 'utf-8');
@@ -95,24 +102,48 @@ const createRecord = async (filename, path, isPrivate, fileType, fileSize) => {
     }
 };
 
-//? Helper function to prompt user input
-async function promptInput(prompt, isPassword = false) {
-    if (isPassword) {
-        return readlineSync.question(prompt, {
-            hideEchoBack: true,
-            mask: "",
+//! Get User's Files
+// ? Fetches the files of the user from the backend
+ async function getFiles() {
+    try {
+        const sessionData = await fs.readFile('session.json', 'utf-8');
+        const { token, userId } = JSON.parse(sessionData);
+
+        const response = await api.get(`/files`, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
         });
-    } else {
-        return readlineSync.question(prompt);
+
+        let _files = {};
+
+        _files.userFiles = response.data.userFiles;
+        _files.userFileTypeCounts = response.data.userFileTypeCounts;
+        _files.publicFiles = response.data.publicFiles;
+        _files.publicFileTypeCounts = response.data.publicFileTypeCounts;
+        _files.privateFiles = response.data.privateFiles;
+        _files.privateFileTypeCounts = response.data.privateFileTypeCounts;
+
+
+        return _files;
+
+    } catch (err) {
+        console.error(err);
     }
+};
+
+// ! prompt user input
+async function promptInput(prompt) {
+    return readlineSync.question(prompt);
 }
 
-// ? Function to get user details from the session file
+// ? helper - get user details from the session file
 async function getUserDetails() {
     const sessionData = await fs.readFile('session.json', 'utf-8');
     const { token, userId } = JSON.parse(sessionData);
 
     const decodedToken = jwt.decode(token);
+
     const username = decodedToken.username;
     const author = username;
     const userIdFromToken = decodedToken.userId;
@@ -129,4 +160,6 @@ module.exports = {
     createRecord,
     login,
     getUserDetails,
+    getFiles,
+    promptInput
 };
